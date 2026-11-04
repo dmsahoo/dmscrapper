@@ -1,0 +1,7 @@
+# Libraries for the Databricks App (Regulatory Scanner)
+databricks-sql-connector
+databricks-sdk
+openai
+mlflow-skinny>=3
+requests
+pyyaml                       # reads config/<env>.yaml

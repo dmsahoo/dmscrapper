@@ -1,0 +1,43 @@
+# =====================================================================
+# Settings for the regulatory scraper (external workspace), DEV environment.
+# The scraper job, the scan verdict job and 00_run_ddl read this file through the
+# common_config_path job parameter. For UAT and PROD, copy it (for example
+# common_config_uat.yaml) and point the jobs to the new file. Never put secrets here.
+#
+# Values in <angle brackets> are placeholders: fill them in for your environment.
+# =====================================================================
+
+environment: dev
+
+# Unity Catalog location of pdf_catalog, scraping_audit_log and the monitoring views
+catalog: "<external-catalog>"
+schema: regulatory_scraping
+
+# Azure Blob Storage where downloaded documents land (Defender scans them on upload)
+landing:
+  storage_account: "<landing-storage-account>"
+  container: raw
+  prefix: documents
+  service_credential: "<scraper-service-credential>"    # Unity Catalog service credential (write and tag read)
+
+# Default scan settings, used when the job parameters are empty
+defaults:
+  scan_mode: INCREMENTAL            # INCREMENTAL, LAST_N_DAYS or CUSTOM
+  last_n_days: 7
+  overlap_days: 3                   # INCREMENTAL also looks back this many days, to catch late listings
+  max_window_days: 31               # longest period one run may scan
+  fail_on_partial: true             # mark the job failed if some items failed
+  stale_run_hours: 6                # a run still RUNNING after this long is treated as stopped
+
+# Regulators: enable one by setting enabled to true and adding its config file and scraper class
+regulators:
+  MAS:
+    enabled: true
+    config_path: config/regulators/mas_config.yaml
+    scraper_module: scrapers.mas_scraper
+    scraper_class: MasScraper
+  PDPC:
+    enabled: false
+    config_path: config/regulators/pdpc_config.yaml
+    scraper_module: scrapers.pdpc_scraper
+    scraper_class: PdpcScraper

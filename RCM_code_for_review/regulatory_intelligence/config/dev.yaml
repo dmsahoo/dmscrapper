@@ -1,0 +1,67 @@
+# =====================================================================
+# Settings for the DEV environment (internal workspace).
+# Every notebook, job, the Q and A Agent and the Databricks App read their names from here,
+# so nothing is hardcoded in the code. For UAT and PROD, copy this file to uat.yaml and
+# prod.yaml and change only the values. Never put secrets (keys, passwords) in this file.
+#
+# Values in <angle brackets> are placeholders: fill them in for your environment.
+# =====================================================================
+
+environment: dev
+
+# Unity Catalog location of the internal tables, views, functions and volume
+catalog: "<internal-catalog>"               # one catalog per environment (AI Admin)
+schema: rcm_internal                # schema of this use case
+volume: documents                   # volume that holds the copied documents
+
+# Scraper tables in the external zone (read only from here)
+external_catalog: "<external-catalog>"
+external_schema: regulatory_scraping
+
+# Landing storage where the scraper saves the files (read only from here)
+landing:
+  storage_account: "<landing-storage-account>"
+  container: raw
+  prefix: documents
+  service_credential: "<internal-service-credential>"   # Unity Catalog service credential with read access
+  clean_verdict: No threats found                 # Defender verdict that allows a file to be copied
+
+# Models and compute
+model_service: "<catalog>.<schema>.<model-service>"  # Unity AI Gateway model service (AI Admin)
+embedding_model: databricks-gte-large-en              # embedding model used for search
+sql_warehouse_id: "<sql-warehouse-id>"                   # SQL warehouse that runs the agent tools in notebooks
+mlflow_experiment_root: /Shared/rcm/dev               # MLflow experiments are created under this folder
+
+# Databricks App service principal (Application ID), used only for the grants in ddl/10_app_grants.sql
+app_service_principal: "<app-service-principal-application-id>"
+
+# CPDAP CPL field 1 (Name of Office)
+name_of_office: SNG Office
+
+# Copy job
+copy:
+  max_retries: 3                    # a file that failed this many times is not tried again
+
+# Parsing and chunking
+chunking:
+  chunk_chars: 3000                 # about 700 to 800 tokens per chunk
+  overlap_chars: 300                # text repeated from the previous chunk, so sentences are not cut
+  min_text_chars: 50                # less text than this counts as a failed parse
+
+# Regulator Agent and Q and A Agent limits
+agent:
+  max_output_tokens: 6000           # Regulator Agent: room for reasoning plus the JSON answer
+  max_rework: 2                     # extra attempts when the code checks fail
+  max_diff_passages: 40             # changed passages given to the agent for an updated document
+  max_diff_chars: 15000             # keeps that part of the prompt a sensible size
+  qa_max_tool_rounds: 4             # Q and A Agent: after this, it must answer without tools
+  qa_max_output_tokens: 4000
+  search_top_k: 8                   # chunks returned by search_chunks
+
+# Guardrails (Azure AI Content Safety and Azure AI Language)
+guardrails:
+  content_safety_endpoint: "https://<content-safety-resource>.cognitiveservices.azure.com"
+  language_endpoint: "https://<language-resource>.cognitiveservices.azure.com"
+  service_credential: "<ai-services-service-credential>"   # managed identity used by notebooks (the app uses keys)
+  block_severity: 2                               # 0 safe, 2 low, 4 medium, 6 high: block at this level or above
+  timeout_seconds: 10
