@@ -1,0 +1,120 @@
+# =====================================================================
+# Settings of the internal workspace (regulatory_intelligence) for the DEV environment.
+#
+# Which file is used: the environment variable RCM_ENV picks common_config_<env>.yaml in the
+# folder named by RCM_CONFIG_DIR. The bundle sets both on the job clusters, and app.yaml sets
+# them for the Databricks App.
+#
+# Values in <angle brackets> are placeholders, given by the AI Admin for each environment.
+# Never put secrets (keys, passwords) in this file.
+# =====================================================================
+
+# Must match RCM_ENV. The code stops if they differ.
+environment: dev
+
+# Unity Catalog catalog of this environment, and one schema per layer (SMBC ADP Development Standards)
+catalog: "<internal-catalog-dev>"
+schemas:
+  raw: "<raw-layer-schema, for example sng_stg_raw>"             # Bronze: copied files and raw records
+  curated: "<curated-layer-schema, for example sng_curated_rcm>"  # Silver: extracted text
+  aggregated: "<gold-layer-schema, for example sng_agg_rcm>"      # Gold: chunks, analysis records, differences
+  ai: "<ai-schema, for example sng_ai_rcm>"                       # AI objects: index, tools, agent state, logs
+  user_view: "<view-schema, for example sng_agg_rcm_usr_view>"    # views read by the app
+
+# Tables: layer (schema above) and name (<source>_<table_name>)
+tables:
+  promotion_log:    {layer: raw,        name: rcm_promotion_log}      # copy state of every document version
+  doc_raw:          {layer: raw,        name: rcm_doc_raw}            # Bronze: the file content and its details
+  doc_content:      {layer: curated,    name: rcm_doc_content}        # Silver: full text of every version
+  doc_chunk:        {layer: aggregated, name: rcm_doc_chunk}          # Gold: chunks of the current version
+  doc_analysis:     {layer: aggregated, name: rcm_doc_analysis}       # CPDAP CPL record per document version
+  doc_diff:         {layer: aggregated, name: rcm_doc_diff}           # exact wording changes between versions
+  agent_task:       {layer: ai,         name: rcm_agent_task}         # Regulator Agent task state
+  guardrail_log:    {layer: ai,         name: rcm_guardrail_log}      # G1 and G2 results (no plain text)
+  user_request_log: {layer: ai,         name: rcm_user_request_log}   # who asked what (restricted access)
+
+views:
+  app_updates: {layer: user_view, name: v_rcm_app_updates}            # Latest changes tab: newest validated version
+  app_history: {layer: user_view, name: v_rcm_app_history}            # every validated version
+
+functions:
+  get_changes: {layer: ai, name: fn_get_changes}                      # agent tool: changes in a period
+
+volumes:
+  documents: {layer: raw, name: vol_documents}                        # files copied after the malware scan
+  logs:      {layer: ai,  name: vol_logs}                             # run log files
+
+indexes:
+  doc_chunk: {layer: ai, name: idx_rcm_doc_chunk}                     # Vector Search index on rcm_doc_chunk
+
+# Databricks Vector Search (Delta Sync index with managed embeddings, triggered sync)
+vector_search:
+  endpoint: "<shared-vector-search-endpoint-dev>"
+  embedding_endpoint: databricks-gte-large-en       # embedding model service used by the index
+  query_type: HYBRID                                # meaning plus keyword
+  columns_to_sync: [chunk_id, document_id, version, regulator_id, category_id, item_title, item_date,
+                    source_url, document_url, section_title, page_from, page_to, chunk_text]
+  sync_timeout_minutes: 60
+
+# Scraper tables in the external zone (read only from here)
+external:
+  catalog: "<external-catalog-dev>"
+  schema: "<external-raw-layer-schema, for example sng_stg_raw>"
+  pdf_catalog: rcm_pdf_catalog
+
+# Landing storage where the scraper saves the files (read only from here)
+landing:
+  storage_account: "<landing-storage-account-dev>"
+  container: raw
+  prefix: documents
+  service_credential: "<internal-landing-service-credential-dev>"
+  clean_verdict: CLEAN                              # only documents with this verdict are copied
+
+# Models, compute and tracing
+model_service: "<catalog>.<schema>.<model-service>"     # Unity AI Gateway model service (AI Admin)
+sql_warehouse_id: "<sql-warehouse-id-dev>"           # SQL warehouse that runs the agent tools in notebooks
+mlflow_experiment_root: /Shared/sng/rcm/dev          # MLflow experiments are created under this folder
+
+# Databricks App service principal (Application ID), used only for the grants in the ddl folder
+app_service_principal: "<app-service-principal-application-id-dev>"
+
+# CPDAP CPL field 1 (Name of Office)
+name_of_office: SNG Office
+
+copy:
+  max_retries: 3                    # a file that failed this many times is not tried again
+
+chunking:
+  chunk_chars: 3000                 # about 700 to 800 tokens per chunk
+  overlap_chars: 300                # text repeated from the previous chunk, so sentences are not cut
+  min_text_chars: 50                # less text than this counts as a failed parse
+
+agent:
+  regulator_agent_name: rcm_regulator_agent
+  max_output_tokens: 6000           # Regulator Agent: room for reasoning plus the JSON answer
+  max_rework: 2                     # extra attempts when the code checks fail
+  max_diff_passages: 40             # changed passages given to the agent for an updated document
+  max_diff_chars: 15000             # keeps that part of the prompt a sensible size
+  qa_agent_name: rcm_qa_agent
+  qa_max_tool_rounds: 4             # Q and A Agent: after this, it must answer without tools
+  qa_max_output_tokens: 4000
+  search_top_k: 8                   # chunks returned by the search tool
+
+# Guardrails (Azure AI Content Safety and Azure AI Language)
+guardrails:
+  content_safety_endpoint: "https://<content-safety-resource-dev>.cognitiveservices.azure.com"
+  language_endpoint: "https://<language-resource-dev>.cognitiveservices.azure.com"
+  service_credential: "<ai-services-service-credential-dev>"   # managed identity used by notebooks (the app uses keys)
+  block_severity: 2                 # 0 safe, 2 low, 4 medium, 6 high: block at this level or above
+  timeout_seconds: 10
+
+# Run logs: one JSON file per run in the logs volume, one folder per job and per regulator
+logging:
+  level: INFO
+
+# Databricks App (Regulatory Scanner): example questions shown next to the chat
+app:
+  example_questions:
+    - What did MAS publish in June 2026 ?
+    - What does MAS Notice 656 say about limits on exposures to a single counterparty group ?
+    - What is the effective date of the MAS Notice FHC-N652 amendment ?

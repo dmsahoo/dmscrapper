@@ -1,0 +1,43 @@
+# Databricks App: Regulatory Scanner. Deployed from the repository root, so requirements.txt can
+# install the rcm_intelligence package and the app can read the config folder.
+# The app settings (command and environment variables) are set here per target, so the same code
+# runs in DEV, UAT and PROD with RCM_ENV = the target name.
+# Name pattern from P02 Appendix A: <use_case>-<purpose>-<env_name>dw, at most 30 characters.
+resources:
+  apps:
+    rcm_scanner:
+      name: rcm-scanner-${bundle.target}dw
+      description: Regulatory Scanner. Latest regulatory changes and the AI Assistant.
+      source_code_path: ..
+      config:
+        command: ['streamlit', 'run', 'app/app.py']
+        env:
+          - name: RCM_ENV                       # which config file: config/common_config_<RCM_ENV>.yaml
+            value: ${bundle.target}
+          - name: RCM_CONFIG_DIR                # the config folder, relative to the app source folder
+            value: config
+          - name: RCM_RELEASE_TAG               # release stamped on every request log row
+            value: ${var.release_tag}
+          - name: DATABRICKS_WAREHOUSE_ID       # from the sql-warehouse resource below
+            valueFrom: sql-warehouse
+          - name: CONTENT_SAFETY_KEY            # interim: keys from the secret scope (an Entra identity is the production option)
+            valueFrom: content-safety-key
+          - name: LANGUAGE_KEY
+            valueFrom: language-key
+          - name: MLFLOW_TRACKING_URI           # agent traces to MLflow; the experiment is set in app.py from the config
+            value: databricks
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
+        - name: content-safety-key
+          secret:
+            scope: ${var.app_secret_scope}
+            key: content_safety_key
+            permission: READ
+        - name: language-key
+          secret:
+            scope: ${var.app_secret_scope}
+            key: language_key
+            permission: READ

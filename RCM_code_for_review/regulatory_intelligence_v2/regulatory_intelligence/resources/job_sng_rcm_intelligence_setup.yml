@@ -1,0 +1,58 @@
+# Set up job: tables, Vector Search index, then views, the agent tool function and the app grants.
+# No schedule. Run once per environment by the deployment workflow, and after a change to the SQL files.
+resources:
+  jobs:
+    job_sng_rcm_intelligence_setup:
+      name: job_sng_rcm_intelligence_setup
+      description: RCM internal set up. Creates the tables, the Vector Search index, the views, the tool function and the grants.
+      max_concurrent_runs: 1
+      tags:
+        project: rcm
+        use_case_id: rcm
+        branch: sng
+        environment: ${bundle.target}
+      job_clusters:
+        - job_cluster_key: rcm_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              RCM_ENV: ${bundle.target}
+              RCM_CONFIG_DIR: ${workspace.file_path}/config
+              RCM_RELEASE_TAG: ${var.release_tag}
+              RCM_LOG_LEVEL: INFO
+      tasks:
+        - task_key: 01_table_creation
+          job_cluster_key: rcm_cluster
+          notebook_task:
+            notebook_path: ../notebooks/00_table_creation_rcm_intelligence.py
+          libraries:
+            - whl: ../dist/*.whl
+        - task_key: 02_index_create
+          depends_on:
+            - task_key: 01_table_creation
+          job_cluster_key: rcm_cluster
+          notebook_task:
+            notebook_path: ../notebooks/04_index_rcm_doc_chunk.py
+            base_parameters:
+              mode: CREATE
+          libraries:
+            - whl: ../dist/*.whl
+            - pypi: {package: "openai==${var.openai_version}"}
+            - pypi: {package: "mlflow==${var.mlflow_version}"}
+            - pypi: {package: "databricks-sdk==${var.databricks_sdk_version}"}
+        - task_key: 03_view_creation
+          depends_on:
+            - task_key: 02_index_create
+          job_cluster_key: rcm_cluster
+          notebook_task:
+            notebook_path: ../notebooks/01_view_creation_rcm_intelligence.py
+          libraries:
+            - whl: ../dist/*.whl

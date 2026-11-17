@@ -1,0 +1,83 @@
+# =====================================================================
+# Databricks Asset Bundle of the RCM internal zone (repository regulatory_intelligence).
+#
+# What it deploys, the same way to DEV, UAT and PROD:
+#   1. the rcm_intelligence wheel (built from src/ by the CI pipeline),
+#   2. the notebooks and the config folder,
+#   3. three jobs (resources/*.yml): set up, daily copy, daily ingest and analysis,
+#   4. the Databricks App (Regulatory Scanner).
+#
+# Every job cluster gets these environment variables, so the code needs no folder paths:
+#   RCM_ENV          the target name: dev, uat or prod
+#   RCM_CONFIG_DIR   the deployed config folder
+#   RCM_RELEASE_TAG  the release (Git tag), stamped on every analysis record
+#
+# Commands (run by the GitHub Actions workflow, never by hand in UAT or PROD):
+#   databricks bundle validate -t <target>
+#   databricks bundle deploy   -t <target> --var release_tag=<tag>
+#   databricks bundle run      -t <target> job_sng_rcm_intelligence_setup
+# Values in <angle brackets> are placeholders from the AI Admin.
+# =====================================================================
+
+bundle:
+  name: rcm_reg_intelligence
+
+include:
+  - resources/*.yml
+
+artifacts:
+  rcm_intelligence_wheel:
+    type: whl
+    path: .
+    build: python -m build --wheel
+
+variables:
+  spark_version:
+    description: Databricks Runtime of the job clusters (17.3 LTS or above, for ai_parse_document)
+    default: 17.3.x-scala2.13
+  node_type_id:
+    description: Azure VM size of the single node job clusters
+    default: Standard_D4ds_v5
+  release_tag:
+    description: Release (Git tag) being deployed, passed by the workflow
+    default: unreleased
+  openai_version:
+    description: Pinned openai library (approved package source)
+    default: 1.109.1
+  mlflow_version:
+    description: Pinned mlflow library (approved package source)
+    default: 3.16.1
+  databricks_sdk_version:
+    description: Pinned databricks-sdk library (Vector Search query_type needs a recent version)
+    default: 0.164.0
+  sql_warehouse_id:
+    description: SQL warehouse used by the app
+  alert_email:
+    description: Mailbox or group that receives job failure alerts
+  job_run_as:
+    description: Application ID of the job service principal of the target environment
+  app_secret_scope:
+    description: Secret scope that holds the guardrail keys of the app
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://<dev-internal-workspace-host>
+
+  uat:
+    mode: production
+    workspace:
+      host: https://<uat-internal-workspace-host>
+      root_path: /Workspace/Shared/.bundle/rcm_reg_intelligence/uat
+    run_as:
+      service_principal_name: ${var.job_run_as}
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<prod-internal-workspace-host>
+      root_path: /Workspace/Shared/.bundle/rcm_reg_intelligence/prod
+    run_as:
+      service_principal_name: ${var.job_run_as}

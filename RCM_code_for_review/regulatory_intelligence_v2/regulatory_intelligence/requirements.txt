@@ -1,0 +1,9 @@
+# Libraries of the Databricks App (Regulatory Scanner), pinned. Installed from the approved package source.
+# The first line installs the rcm_intelligence package from this repository (pyproject.toml).
+.
+databricks-sql-connector==4.0.5
+databricks-sdk==0.164.0
+openai==1.109.1
+mlflow-skinny==3.16.1
+requests==2.32.3
+PyYAML==6.0.2

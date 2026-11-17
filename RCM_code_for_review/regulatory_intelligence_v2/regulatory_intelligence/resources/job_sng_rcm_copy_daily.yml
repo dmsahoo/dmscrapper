@@ -1,0 +1,55 @@
+# Daily copy job: copies CLEAN documents into the internal zone, then starts the ingest job.
+# Runs after the scan verdict job of the external workspace (08:00 SGT).
+resources:
+  jobs:
+    job_sng_rcm_copy_daily:
+      name: job_sng_rcm_copy_daily
+      description: RCM copy. Promotes documents with the verdict CLEAN from the landing storage to the internal volume.
+      max_concurrent_runs: 1
+      tags:
+        project: rcm
+        use_case_id: rcm
+        branch: sng
+        environment: ${bundle.target}
+      schedule:
+        quartz_cron_expression: "0 0 10 * * ?"          # 10:00 SGT every day
+        timezone_id: Asia/Singapore
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}
+      parameters:
+        - name: regulator_id
+          default: ALL
+        - name: max_files
+          default: "500"
+      job_clusters:
+        - job_cluster_key: rcm_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              RCM_ENV: ${bundle.target}
+              RCM_CONFIG_DIR: ${workspace.file_path}/config
+              RCM_RELEASE_TAG: ${var.release_tag}
+              RCM_LOG_LEVEL: INFO
+      tasks:
+        - task_key: 01_copy
+          job_cluster_key: rcm_cluster
+          notebook_task:
+            notebook_path: ../notebooks/02_ingest_rcm_copy.py
+          libraries:
+            - whl: ../dist/*.whl
+        - task_key: 02_run_ingest
+          depends_on:
+            - task_key: 01_copy
+          run_if: ALL_DONE
+          run_job_task:
+            job_id: ${resources.jobs.job_sng_rcm_ingest_daily.id}
