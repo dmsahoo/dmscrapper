@@ -1,0 +1,172 @@
+# =====================================================================
+# MAS website rules for the regulatory scraper.
+# Each category is one listing page. date_source says which date decides the scan period.
+# pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each item page.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: MAS
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed or downloaded
+base_url: https://www.mas.gov.sg
+
+# Starting page, used in the smoke check
+landing_url: https://www.mas.gov.sg/regulation
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing cards to appear
+listing_render_timeout_ms: 30000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins)
+html_content_selectors:
+- .mas-rte-content
+- main
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per listing page the scraper reads
+categories:
+- category_id: 1_NOTICES
+  category_name: Notices (new Notices and amendments)
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/regulation/regulations-and-guidance?sectors=Banking&content_type=Notices
+  expected_card_types:
+  - Notices
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 2_CONSULTATION_PAPERS
+  category_name: Consultation Papers
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/regulation/regulations-and-guidance?sectors=Banking&content_type=Consultations
+  expected_card_types:
+  - Consultations
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords:
+  - response
+- category_id: 3_RESPONSES_TO_FEEDBACK
+  category_name: Responses to Feedback (on consultations)
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/regulation/regulations-and-guidance?sectors=Banking&content_type=Consultations
+  expected_card_types:
+  - Consultations
+  date_source: response_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords:
+  - response
+  pdf_exclude_keywords: []
+- category_id: 4_GUIDELINES
+  category_name: Guidelines (new and revised)
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/regulation/regulations-and-guidance?sectors=Banking&content_type=Guidelines
+  expected_card_types:
+  - Guidelines
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 5_INFORMATION_PAPERS
+  category_name: Information Papers
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/regulation/regulations-and-guidance?sectors=Banking&content_type=Monographs%2FInformation%20Papers
+  expected_card_types:
+  - Monographs/Information Papers
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 6_CIRCULARS_AND_ADVISORIES
+  category_name: Circulars and Advisories
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/regulation/regulations-and-guidance?sectors=Banking&content_type=Circulars
+  expected_card_types:
+  - Circulars
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 7_ENFORCEMENT_ACTIONS
+  category_name: Enforcement Actions
+  listing_type: table
+  listing_url: https://www.mas.gov.sg/regulation/enforcement/enforcement-actions
+  expected_card_types: []
+  date_source: table_issue_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 8_SPEECHES
+  category_name: Speeches by MD, Deputy MDs, or Assistant MDs with policy implications
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/news?sectors=Banking&content_type=Speeches
+  expected_card_types:
+  - Speeches
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 9_MEDIA_RELEASES
+  category_name: Press Releases and Media Statements
+  listing_type: cards
+  listing_url: https://www.mas.gov.sg/news?sectors=Banking&content_type=Media%20Releases
+  expected_card_types:
+  - Media Releases
+  date_source: listing_date
+  filter_by_date_in_url: true
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

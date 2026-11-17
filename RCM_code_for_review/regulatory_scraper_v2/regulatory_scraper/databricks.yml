@@ -1,0 +1,76 @@
+# =====================================================================
+# Databricks Asset Bundle of the RCM scraper (external workspace).
+#
+# What it deploys, the same way to DEV, UAT and PROD:
+#   1. the rcm_scraper wheel (built from src/ by the CI pipeline),
+#   2. the notebooks and the config folder,
+#   3. three jobs (resources/*.yml): set up, daily scrape, daily scan verdict.
+#
+# The job clusters get two environment variables, so the code needs no folder paths:
+#   RCM_ENV         the target name: dev, uat or prod
+#   RCM_CONFIG_DIR  the deployed config folder
+#
+# Commands (run by the GitHub Actions workflow, never by hand in UAT or PROD):
+#   databricks bundle validate -t <target>
+#   databricks bundle deploy   -t <target>
+#   databricks bundle run      -t <target> job_sng_rcm_scraper_setup
+# Values in <angle brackets> are placeholders from the AI Admin.
+# =====================================================================
+
+bundle:
+  name: rcm_reg_scraper
+
+include:
+  - resources/*.yml
+
+artifacts:
+  rcm_scraper_wheel:
+    type: whl
+    path: .
+    build: python -m build --wheel
+
+variables:
+  spark_version:
+    description: Databricks Runtime of the job clusters (15.4 LTS or above, for service credentials)
+    default: 15.4.x-scala2.12
+  node_type_id:
+    description: Azure VM size of the single node job clusters
+    default: Standard_D4ds_v5
+  init_script_path:
+    description: Unity Catalog volume path of playwright_init.sh (the volume must be on the admin allowlist)
+  playwright_version:
+    description: Pinned Playwright version installed by the init script
+    default: 1.47.0
+  edge_version:
+    description: Pinned microsoft-edge-stable package version (offline mode). Empty means the latest on the mirror
+    default: ""
+  playwright_artifacts_dir:
+    description: Volume folder with the approved Playwright wheels (offline mode). Empty means online mode (lab only)
+    default: ""
+  alert_email:
+    description: Mailbox or group that receives job failure alerts
+  job_run_as:
+    description: Application ID of the job service principal of the target environment
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://<dev-external-workspace-host>
+
+  uat:
+    mode: production
+    workspace:
+      host: https://<uat-external-workspace-host>
+      root_path: /Workspace/Shared/.bundle/rcm_reg_scraper/uat
+    run_as:
+      service_principal_name: ${var.job_run_as}
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<prod-external-workspace-host>
+      root_path: /Workspace/Shared/.bundle/rcm_reg_scraper/prod
+    run_as:
+      service_principal_name: ${var.job_run_as}

@@ -1,0 +1,50 @@
+# Daily scan verdict job: records the Defender result of every saved document.
+# Runs after the scrape job and before the internal copy job.
+resources:
+  jobs:
+    job_sng_rcm_scan_verdict_daily:
+      name: job_sng_rcm_scan_verdict_daily
+      description: RCM scan verdict. Maps the Defender blob index tag to PENDING, CLEAN, MALICIOUS or SCAN_ERROR.
+      max_concurrent_runs: 1
+      tags:
+        project: rcm
+        use_case_id: rcm
+        branch: sng
+        environment: ${bundle.target}
+      schedule:
+        quartz_cron_expression: "0 0 8 * * ?"          # 08:00 SGT every day
+        timezone_id: Asia/Singapore
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}
+      parameters:
+        - name: regulator_id
+          default: ALL
+        - name: max_files
+          default: "1000"
+
+      job_clusters:
+        - job_cluster_key: scan_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              RCM_ENV: ${bundle.target}
+              RCM_CONFIG_DIR: ${workspace.file_path}/config
+              RCM_LOG_LEVEL: INFO
+
+      tasks:
+        - task_key: 01_scan_verdict
+          job_cluster_key: scan_cluster
+          notebook_task:
+            notebook_path: ../notebooks/04_ingest_rcm_scan_verdict.py
+          libraries:
+            - whl: ../dist/*.whl

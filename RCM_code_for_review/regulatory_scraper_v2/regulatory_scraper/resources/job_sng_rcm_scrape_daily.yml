@@ -1,0 +1,77 @@
+# Daily scrape job: resolve the regulator list, then scrape each regulator (For each task).
+resources:
+  jobs:
+    job_sng_rcm_scrape_daily:
+      name: job_sng_rcm_scrape_daily
+      description: RCM scraper. Collects new and changed publications of every enabled regulator.
+      max_concurrent_runs: 1
+      tags:
+        project: rcm
+        use_case_id: rcm
+        branch: sng
+        environment: ${bundle.target}
+      schedule:
+        quartz_cron_expression: "0 0 7 * * ?"          # 07:00 SGT every day
+        timezone_id: Asia/Singapore
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}
+      parameters:
+        - name: regulators
+          default: ALL
+        - name: scan_mode
+          default: DEFAULT
+        - name: scan_start_date
+          default: ""
+        - name: scan_end_date
+          default: ""
+        - name: last_n_days
+          default: ""
+
+      job_clusters:
+        - job_cluster_key: scraper_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              RCM_ENV: ${bundle.target}
+              RCM_CONFIG_DIR: ${workspace.file_path}/config
+              RCM_LOG_LEVEL: INFO
+              PLAYWRIGHT_VERSION: ${var.playwright_version}
+              PLAYWRIGHT_ARTIFACTS_DIR: ${var.playwright_artifacts_dir}
+              EDGE_VERSION: ${var.edge_version}
+            init_scripts:
+              - volumes:
+                  destination: ${var.init_script_path}
+
+      tasks:
+        - task_key: 01_resolve_regulators
+          job_cluster_key: scraper_cluster
+          notebook_task:
+            notebook_path: ../notebooks/02_ingest_rcm_resolve_regulators.py
+          libraries:
+            - whl: ../dist/*.whl
+
+        - task_key: 02_scrape_regulators
+          depends_on:
+            - task_key: 01_resolve_regulators
+          for_each_task:
+            inputs: "{{tasks.01_resolve_regulators.values.regulator_ids}}"
+            concurrency: 1
+            task:
+              task_key: 02_scrape_regulator
+              job_cluster_key: scraper_cluster
+              notebook_task:
+                notebook_path: ../notebooks/03_ingest_rcm_scrape.py
+                base_parameters:
+                  regulator_id: "{{input}}"
+              libraries:
+                - whl: ../dist/*.whl

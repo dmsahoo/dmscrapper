@@ -1,0 +1,70 @@
+# =====================================================================
+# Settings of the regulatory scraper (external workspace) for the PROD environment.
+#
+# Which file is used: the cluster environment variable RCM_ENV picks
+# common_config_<env>.yaml in the folder named by RCM_CONFIG_DIR. The deployment
+# bundle (databricks.yml) sets both variables on the job clusters.
+#
+# Values in <angle brackets> are placeholders, given by the AI Admin for each environment.
+# Never put secrets (keys, passwords) in this file.
+# =====================================================================
+
+# Must match RCM_ENV. The code stops if they differ, so a UAT file is never used in PROD.
+environment: prod
+
+# Unity Catalog location of the scraper tables (SMBC ADP: raw layer schema <branch>_stg_raw)
+catalog: "<external-catalog-prod>"
+schema: "<raw-layer-schema, for example sng_stg_raw>"
+
+# Table names (SMBC ADP: <source>_<table_name>, the layer is in the schema name)
+tables:
+  pdf_catalog: rcm_pdf_catalog              # every document, its current version and scan verdict
+  audit_log: rcm_scraping_audit_log         # append only trail of every run, category, item and file
+
+# Azure Blob Storage where downloaded documents land. No hierarchical namespace (HNS off),
+# because Defender writes its scan result as a blob index tag, which needs HNS off.
+landing:
+  storage_account: "<landing-storage-account-prod>"
+  container: raw
+  prefix: documents
+  service_credential: "<scraper-service-credential-prod>"   # Unity Catalog service credential (write and tag read)
+
+# Malware scan verdict mapping: Defender tag text to the fixed verdict used by every job.
+# Matching ignores spaces and upper or lower case. Any other text becomes SCAN_ERROR (never CLEAN).
+malware_scan:
+  tag_name: Malware Scanning scan result            # blob index tag with the result
+  time_tag_name: Malware Scanning scan time UTC     # blob index tag with the scan time
+  verdict_map:
+    No threats found: CLEAN
+    Malicious: MALICIOUS
+  missing_tag_verdict: PENDING                      # no tag yet: check again on the next run
+  unknown_value_verdict: SCAN_ERROR                 # any other text: never copied, alert
+  pending_alert_hours: 24                           # warn when a file is PENDING for longer than this
+
+# Run logs: one JSON file per run, in /Volumes/<catalog>/<schema>/<volume>/<folder>/<regulator>/<day>/
+logging:
+  volume: vol_logs
+  folder: scraper
+
+# Default scan settings, used when the job parameters are empty
+defaults:
+  scan_mode: INCREMENTAL            # INCREMENTAL, CUSTOM, LAST_N_DAYS, PREVIOUS_MONTH or MONTH_TO_DATE
+  last_n_days: 7
+  overlap_days: 3                   # INCREMENTAL also looks back this many days, to catch late listings
+  max_window_days: 31               # longest period one run may scan
+  fail_on_partial: true             # mark the job failed if some items failed
+  stale_run_hours: 6                # a run still RUNNING after this long is treated as stopped
+
+# Regulators: enable one by setting enabled to true and adding its config file and scraper class.
+# config_path is relative to this config folder.
+regulators:
+  MAS:
+    enabled: true
+    config_path: regulators/mas_config.yaml
+    scraper_module: rcm_scraper.mas_scraper
+    scraper_class: MasScraper
+  PDPC:
+    enabled: false
+    config_path: regulators/pdpc_config.yaml
+    scraper_module: rcm_scraper.pdpc_scraper
+    scraper_class: PdpcScraper
