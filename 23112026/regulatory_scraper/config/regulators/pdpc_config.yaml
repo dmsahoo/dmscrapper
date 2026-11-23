@@ -1,0 +1,189 @@
+# =====================================================================
+# PDPC (www.pdpc.gov.sg) website rules for the regulatory scraper.
+# Each category is one Entry URL from the intake tracker. date_source says which date decides
+# the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each
+# item page. Lines marked PLACEHOLDER need your input or confirmation.
+#
+# The PDPC site sits behind an AWS WAF bot challenge (plain requests get HTTP 202 with an
+# empty body), so its HTML could not be inspected. The scraper therefore uses no CSS
+# selectors for listings: see the docstring of scrapers/pdpc_scraper.py.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: PDPC
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed or downloaded
+base_url: https://www.pdpc.gov.sg
+
+# Starting page, used in the smoke check
+landing_url: https://www.pdpc.gov.sg/
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing to appear (includes passing the bot challenge)
+listing_render_timeout_ms: 45000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins). PLACEHOLDER: not checked on PDPC.
+html_content_selectors:
+- main
+- body
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- header
+- footer
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per Entry URL in the intake tracker
+# listing_type cards: every result on the listing is a link with a date next to it
+#   (date_source listing_date). Entry URLs with page=1 are read page=1, 2, ... (sort=latest,
+#   newest first) until a page is older than the scan start. Entry URLs without page= are
+#   read as one page.
+# Filter / Date Rule (By Type, By Year, Latest): the type is the ?type= of the Entry URL; the
+#   year / period is the scan period of the run. PDPC has no date range in the URL, so
+#   filter_by_date_in_url is false everywhere.
+# expected_card_types must be []: without selectors the scraper cannot read card labels.
+categories:
+# PLACEHOLDER: the tracker Entry URL for this row is a MAS link (copy/paste error) and the
+# link given in chat is the Public Consultations page (same as category 3). This URL follows
+# the Media & Events pattern of category 7A; confirm the type name on the site.
+- category_id: 1_MEDIA_RELEASES
+  category_name: Press releases and Media Statements with regulatory or industry impact
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/media-events?type=Media+Releases&sort=latest&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 2_ADVISORY_GUIDELINES
+  category_name: Advisory Guidelines
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/organisations/regulations-decisions/regulatory-guidance?type=Advisory+Guidelines&sort=latest&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# Categories 3 and 4 read the same listing; PDFs are split by the word 'response' (as MAS).
+- category_id: 3_PUBLIC_CONSULTATIONS
+  category_name: Public Consultations
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/organisations/regulations-decisions/public-consultations
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords:
+  - response
+
+# PLACEHOLDER: the item date is the consultation's listing date, so a response published
+# months after its consultation is only found when the run's scan period covers the
+# consultation date. The example response page (/responses-received-on-31-august-2023) is a
+# single page, not a listing; tell me if PDPC lists responses somewhere with their own date.
+- category_id: 4_RESPONSES_TO_FEEDBACK
+  category_name: Responses to Feedback (on public consultations)
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/organisations/regulations-decisions/public-consultations
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords:
+  - response
+  pdf_exclude_keywords: []
+
+- category_id: 5_COMMISSION_DECISIONS
+  category_name: Commission's Decisions
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/organisations/regulations-decisions/enforcement-decisions?type=Commission%27s+Decisions&sort=latest&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# PLACEHOLDER: the tracker gives the unfiltered Enforcement Decisions page, but the navigation
+# path says 'Apply filter (Voluntary Undertakings)'. This URL applies that filter the same way
+# as category 5; confirm the type name. (If the unfiltered URL is used instead, decisions
+# already saved by category 5 are skipped as DUPLICATE_IN_RUN, so only the rest lands here.)
+- category_id: 6_VOLUNTARY_UNDERTAKINGS
+  category_name: Voluntary Undertakings
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/organisations/regulations-decisions/enforcement-decisions?type=Voluntary+Undertakings&sort=latest&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# Tracker row 'Circulars, Advisories and Sector Guidance' is split in two. Circulars: Unclear
+# in the tracker (no Entry URL), so not configured. PLACEHOLDER: add a category when known.
+- category_id: 7A_ADVISORIES
+  category_name: Advisories
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/media-events?type=Advisories&sort=latest&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 7B_SECTOR_GUIDANCE
+  category_name: Sector-Specific Guidelines
+  listing_type: cards
+  listing_url: https://www.pdpc.gov.sg/organisations/regulations-decisions/regulatory-guidance?type=Sector-Specific+Guidelines&sort=latest&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

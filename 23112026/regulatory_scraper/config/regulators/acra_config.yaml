@@ -1,0 +1,190 @@
+# =====================================================================
+# ACRA (www.acra.gov.sg) website rules for the regulatory scraper.
+# Each category is one Entry URL from the intake tracker. 
+# date_source says which date decides the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each
+# item page. Lines marked PLACEHOLDER need your input or confirmation.
+#
+# ACRA runs on Isomer (same platform as REACH and the MHA Newsroom) and answers plain requests
+# (checked 2026-11-17). ACRA PDFs are stored on isomer-user-content.by.gov.sg, not on
+# www.acra.gov.sg; scrapers/acra_scraper.py allows that host for PDF downloads.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: ACRA
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed (PDFs also from isomer-user-content.by.gov.sg)
+base_url: https://www.acra.gov.sg
+
+# Starting page, used in the smoke check (tracker Homepage row, not a category)
+landing_url: https://www.acra.gov.sg/
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing cards to appear (and for the Entry URL filters and page to apply)
+listing_render_timeout_ms: 30000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins). ACRA pages have a <main>.
+html_content_selectors:
+- main
+- body
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- header
+- footer
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per Entry URL in the intake tracker
+# listing_type section_pages (date_source last_updated): the Entry URL page itself plus every
+#   page it links to under the same path. Each page is opened and its 'Last updated on
+#   15 September 2026' line gives the item date. A page is an item when that date is inside the
+#   scan period; its PDFs are downloaded. PDFs that were saved before and did not change are
+#   SKIPPED, so only new or changed PDFs land.
+# listing_type cards (date_source listing_date): Isomer result cards, read page=1, 2, ...
+#   (newest first) until a page is older than the scan start or the last page is reached.
+#   The filters parameter in listing_url is the site's own filter (same format the ACRA site
+#   uses in its links). Do not add a Year filter: it would stop finding new items when the
+#   year changes. The scan period is applied from the card date.
+# ACRA has no date range in the URL, so filter_by_date_in_url is false everywhere.
+# expected_card_types: [] turns the label check off (the filters parameter limits the cards).
+categories:
+# each of these categories are the reg's specific coverage requirements
+# Tracker row 1 'Practice Directions and Guidelines' is split in three (one per Entry URL)
+
+# PLACEHOLDER: the first run with a scan period that covers the page's Last updated date saves
+# every PDF on the page as NEW (later runs only new or changed ones). Tell me if only PDFs
+# published in the scan period should be saved; the Audit Practice Bulletins page shows a date
+# per PDF, Practice Directions only a year heading and Registrar's Interpretations no date.
+- category_id: 1A_PRACTICE_DIRECTIONS
+  category_name: Practice Directions
+  listing_type: section_pages
+  listing_url: https://www.acra.gov.sg/regulations/practice-directions-registrars-interpretations-guidance/practice-directions/
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 1B_REGISTRARS_INTERPRETATIONS
+  category_name: Registrar's Interpretations
+  listing_type: section_pages
+  listing_url: https://www.acra.gov.sg/regulations/practice-directions-registrars-interpretations-guidance/registrars-interpretations/
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 1C_AUDIT_PRACTICE_BULLETINS
+  category_name: Audit Practice Bulletins
+  listing_type: section_pages
+  listing_url: https://www.acra.gov.sg/regulations/practice-directions-registrars-interpretations-guidance/audit-practice-bulletins/
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# The Overview page links to pages under /manage/companies/ (not under /overview/), so the
+# scraper reads links under /manage/companies/ for this category (SECTION_ROOTS in
+# scrapers/acra_scraper.py).
+
+# PLACEHOLDER: the tracker Filter column says 'Announcement or Press Release' and Content
+# Location says 'Direct child article pages from the News & Announcements list', which point
+# to the News listing (category 5), not this Entry URL. Confirm which one is meant.
+# PLACEHOLDER: 2b XBRL Taxonomy updates and 2c BizFile changes may sit outside
+# /manage/companies/ (only links under it are read). Add their Entry URLs if needed.
+- category_id: 2_NOTICES_AND_CIRCULARS
+  category_name: Notices and Circulars
+  listing_type: section_pages
+  listing_url: https://www.acra.gov.sg/manage/companies/overview/
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# PLACEHOLDER: only pages linked from the Legislation page are read (one level). Pages linked
+# from those pages (for example single Amendment Acts under /amendment-acts/) are not.
+- category_id: 3_LEGISLATION_UPDATES
+  category_name: Legislation Updates
+  listing_type: section_pages
+  listing_url: https://www.acra.gov.sg/regulations/legislation/
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# Filter: Category = Public Consultation or Summary of Response (tracker Filter column). Status
+# is not filtered: the tracker says Open or Closed, which is every status.
+# PLACEHOLDER: Comment letters (third Category value on the site) are left out; add
+# {"id":"Comment letters"} to the filter if they are in scope.
+- category_id: 4_POLICY_AND_CONSULTATIONS
+  category_name: Policy and Consultations
+  listing_type: cards
+  listing_url: https://www.acra.gov.sg/public-consultations/?filters=%5B%7B%22id%22%3A%22Category%22%2C%22items%22%3A%5B%7B%22id%22%3A%22Public+Consultation%22%7D%2C%7B%22id%22%3A%22Summary+of+Response%22%7D%5D%7D%5D&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# PLACEHOLDER: the tracker says 'By Category' without naming them. Press release and
+# Announcement are used for now; the site also has Speech, ACRAConnect newsletter and Reply to
+# forum letters. Remove the filters parameter to read every category.
+- category_id: 5_NEWS_ANNOUNCEMENTS
+  category_name: News Announcements
+  listing_type: cards
+  listing_url: https://www.acra.gov.sg/news-events/news-announcements/?filters=%5B%7B%22id%22%3A%22Category%22%2C%22items%22%3A%5B%7B%22id%22%3A%22Press+release%22%7D%2C%7B%22id%22%3A%22Announcement%22%7D%5D%7D%5D&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

@@ -1,0 +1,119 @@
+# =====================================================================
+# SSO (Singapore Statutes Online) website rules for the regulatory scraper.
+# Each category is one listing page (a Browse supplement). date_source says which date decides
+# the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each
+# item page. Lines marked PLACEHOLDER need your input or confirmation.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: SSO
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed or downloaded
+base_url: https://sso.agc.gov.sg
+
+# Starting page, used in the smoke check
+landing_url: https://sso.agc.gov.sg/
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing table to appear
+listing_render_timeout_ms: 30000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins)
+# PLACEHOLDER: add the SSO legislation text container above main once confirmed in DevTools
+html_content_selectors:
+- main
+- body
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per listing page the scraper reads
+# The Browse supplements only filter by year and Title keyword (no month or date range), so
+# filter_by_date_in_url is false and the scan period is applied from the date of each item.
+# Do not put a year in listing_url: it would stop finding new items when the year changes.
+# Categories 1 and 2 both read the Acts Supplement and are split by title (TITLE_RULES in
+# scrapers/sso_scraper.py): new Acts to 1, Amendment Acts to 2. Category 2 also uses the
+# site's Title=Amendment filter, which only narrows the same set.
+# expected_card_types must stay [] (table rows have no type label).
+# PLACEHOLDER download_pdfs / capture_html: SSO PDF links may not end in .pdf (base_scraper
+#   only keeps links ending in .pdf), so capture_html is true to keep the page text as well.
+# PLACEHOLDER pdf_include_keywords / pdf_exclude_keywords: add words to keep only some PDFs.
+categories:
+- category_id: 1_ACTS_SUPPLEMENT_NEW_ACTS
+  category_name: Acts Supplement (New Acts)
+  listing_type: table
+  listing_url: https://sso.agc.gov.sg/Browse/Acts-Supp/Published/All/0?PageSize=20&SortBy=Year&SortOrder=DESC
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 2_ACTS_SUPPLEMENT_AMENDMENT_ACTS
+  category_name: Acts Supplement (Amendment Acts)
+  listing_type: table
+  listing_url: https://sso.agc.gov.sg/Browse/Acts-Supp/Published/All/0?PageSize=20&SortBy=Year&SortOrder=DESC&Title=Amendment
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 3_SL_SUPPLEMENT
+  category_name: SL Supplement (Subsidiary Legislation and Commencement)
+  listing_type: table
+  listing_url: https://sso.agc.gov.sg/Browse/SL-Supp/Published/All/0?PageSize=100&SortBy=Year&SortOrder=DESC
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+- category_id: 4_BILLS_SUPPLEMENT
+  category_name: Bills Supplement and Lifecycle Verification
+  listing_type: table
+  listing_url: https://sso.agc.gov.sg/Browse/Bills-Supp/Published/All/0?PageSize=20&SortBy=Year&SortOrder=DESC
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

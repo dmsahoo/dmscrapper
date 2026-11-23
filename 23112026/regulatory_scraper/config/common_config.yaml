@@ -1,0 +1,75 @@
+# =====================================================================
+# Settings for the regulatory scraper (external workspace), DEV environment.
+# The scraper job, the scan verdict job and 00_run_ddl read this file through the
+# common_config_path job parameter. For UAT and PROD, copy it (for example
+# common_config_uat.yaml) and point the jobs to the new file. Never put secrets here.
+#
+# Values in <angle brackets> are placeholders: fill them in for your environment.
+# =====================================================================
+
+environment: dev
+
+# Unity Catalog location of pdf_catalog, scraping_audit_log and the monitoring views.
+# The DDL files use ${catalog} and ${schema}; notebooks/00_run_ddl fills them from these two values.
+# SMBC DEV values below. For UAT and PROD, set the catalog and schema agreed with the AI Admin.
+catalog: ucaiextdev                 # SMBC external catalog, DEV
+schema: sng_rcm_ai                  # P02 pattern <branch>_<project>_ai
+
+# Azure Blob Storage where downloaded documents land (Defender scans them on upload)
+landing:
+  storage_account: "<landing_storage_account>"     # SMBC landing Blob Storage account (HNS off, for blob index tags)
+  container: raw
+  prefix: documents
+  service_credential: "<landing_service_credential>"  # Unity Catalog service credential (write and tag read)
+
+# Default scan settings, used when the job parameters are empty
+defaults:
+  scan_mode: INCREMENTAL            # INCREMENTAL, LAST_N_DAYS or CUSTOM
+  last_n_days: 7
+  overlap_days: 3                   # INCREMENTAL also looks back this many days, to catch late listings
+  max_window_days: 31               # longest period one run may scan
+  fail_on_partial: true             # mark the job failed if some items failed
+  stale_run_hours: 6                # a run still RUNNING after this long is treated as stopped
+
+# Regulators: enable one by setting enabled to true and adding its config file and scraper class
+regulators:
+  MAS:
+    enabled: true
+    config_path: config/regulators/mas_config.yaml
+    scraper_module: scrapers.mas_scraper
+    scraper_class: MasScraper
+  PDPC:
+    enabled: true
+    config_path: config/regulators/pdpc_config.yaml
+    scraper_module: scrapers.pdpc_scraper
+    scraper_class: PdpcScraper
+  MHA:
+    enabled: true
+    config_path: config/regulators/mha_config.yaml
+    scraper_module: scrapers.mha_scraper
+    scraper_class: MhaScraper
+  SSO:
+    enabled: true
+    config_path: config/regulators/sso_config.yaml
+    scraper_module: scrapers.sso_scraper
+    scraper_class: SsoScraper
+  REACH:
+    enabled: true
+    config_path: config/regulators/reach_config.yaml
+    scraper_module: scrapers.reach_scraper
+    scraper_class: ReachScraper
+  MOM:
+    enabled: true
+    config_path: config/regulators/mom_config.yaml
+    scraper_module: scrapers.mom_scraper
+    scraper_class: MomScraper
+  PARLIAMENT:
+    enabled: true
+    config_path: config/regulators/parliament_config.yaml
+    scraper_module: scrapers.parliament_scraper
+    scraper_class: ParliamentScraper
+  ACRA:
+    enabled: true
+    config_path: config/regulators/acra_config.yaml
+    scraper_module: scrapers.acra_scraper
+    scraper_class: AcraScraper

@@ -1,0 +1,107 @@
+# =====================================================================
+# MHA website rules for the regulatory scraper.
+# Each category is one listing page (a Newsroom search). date_source says which date decides
+# the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each
+# item page. Lines marked PLACEHOLDER need your input or confirmation.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: MHA
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed or downloaded
+base_url: https://www.mha.gov.sg
+
+# Starting page, used in the smoke check
+landing_url: https://www.mha.gov.sg/media-room/newsroom/
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing cards to appear
+listing_render_timeout_ms: 30000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins)
+# PLACEHOLDER: add the MHA article body container above main once confirmed in DevTools
+html_content_selectors:
+- main
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per listing page the scraper reads
+# All three use the Newsroom search, which has no date filter in the URL, so
+# filter_by_date_in_url is false and the scan period is applied from the card date.
+# The page number in listing_url is replaced by the scraper (page=1, 2, ...).
+# PLACEHOLDER expected_card_types: [] turns the type check off. Search results mix types
+#   (seen: Press Releases, Speeches). Enter exact labels only if a category must contain
+#   nothing else; any other label then fails the category.
+# PLACEHOLDER download_pdfs / capture_html: PDFs are only kept when hosted on www.mha.gov.sg.
+# PLACEHOLDER pdf_include_keywords / pdf_exclude_keywords: add words to keep only some PDFs.
+categories:
+- category_id: 1_INTERNAL_SECURITY_ACT_ORDERS
+  category_name: Internal Security Act Orders
+  listing_type: cards
+  listing_url: https://www.mha.gov.sg/media-room/newsroom/?search=Internal+security+act+&page=2
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 2_JOINT_ADVISORIES_AND_GUIDANCE
+  category_name: Joint Advisories and Guidance
+  listing_type: cards
+  listing_url: https://www.mha.gov.sg/media-room/newsroom/?search=joint+&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 3_PRESS_RELEASES_AND_MINISTERIAL_STATEMENTS
+  category_name: Press Releases and Ministerial Statements
+  listing_type: cards
+  listing_url: https://www.mha.gov.sg/media-room/newsroom/?search=ministerial&page=1
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: false
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

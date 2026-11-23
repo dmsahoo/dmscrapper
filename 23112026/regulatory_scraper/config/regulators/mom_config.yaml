@@ -1,0 +1,141 @@
+# =====================================================================
+# MOM (www.mom.gov.sg) website rules for the regulatory scraper.
+# Each category is one Entry URL from the intake tracker. date_source says which date decides
+# the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each
+# item page. Lines marked PLACEHOLDER need your input or confirmation.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: MOM
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed or downloaded
+base_url: https://www.mom.gov.sg
+
+# Starting page, used in the smoke check
+landing_url: https://www.mom.gov.sg/
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing to appear
+listing_render_timeout_ms: 30000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins)
+# MOM pages have no <main>; the content sits in div#MainContent (checked on all 5 Entry URLs)
+html_content_selectors:
+- '#MainContent'
+- main
+- body
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per Entry URL in the intake tracker
+# Two listing types:
+#   cards          Newsroom listing. Each result card has a date and its categories.
+#                  date_source listing_date. Pages are read with page=1, 2, ... (newest first).
+#   section_pages  A topic section (Static HTML / Mixed). Items are the Entry URL page itself plus
+#                  the pages linked from it under the same path (e.g. /passes-and-permits/s-pass).
+#                  date_source last_updated: the 'Last Updated' date printed on each MOM page.
+#                  An item is taken when it was updated inside the scan period.
+# Filter / Date Rule (By Category, By Year): the category is the Entry URL; the year / period is
+# the scan period of the run. To limit Newsroom or eServices to one MOM category, add
+# ?category=<name> to the Entry URL (as the site's own Filter by links do).
+# MOM has no date range filter in the URL, so filter_by_date_in_url is false everywhere.
+# expected_card_types: [] turns the label check off. On a Newsroom card the labels are MOM
+#   categories (e.g. Foreign manpower); list some here to fail the run if others appear.
+# PLACEHOLDER pdf_include_keywords / pdf_exclude_keywords: add words to keep only some PDFs.
+categories:
+- category_id: 1_WORK_PASS_POLICY
+  category_name: Work Pass Policy & Thresholds
+  listing_type: section_pages
+  listing_url: https://www.mom.gov.sg/passes-and-permits/
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 2_EMPLOYMENT_LEGISLATION
+  category_name: Employment Legislation & Tripartite Standards
+  listing_type: section_pages
+  listing_url: https://www.mom.gov.sg/employment-practices/employment-act
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 3_NEWSROOM
+  category_name: Newsroom (Press Releases, Speeches & Consultations)
+  listing_type: cards
+  listing_url: https://www.mom.gov.sg/newsroom/press-releases
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 4_WORKPLACE_SAFETY_AND_HEALTH
+  category_name: Workplace Safety & Health
+  listing_type: section_pages
+  listing_url: https://www.mom.gov.sg/workplace-safety-and-health
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# eServices listing links mostly go off-host (form.gov.sg, service2.mom.gov.sg); those are
+# applications, not content, and are skipped. The /eservices/services/... pages are kept.
+- category_id: 5_OPERATIONAL_ESERVICES
+  category_name: Operational eServices
+  listing_type: section_pages
+  listing_url: https://www.mom.gov.sg/eservices
+  expected_card_types: []
+  date_source: last_updated
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

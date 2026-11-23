@@ -1,0 +1,139 @@
+# =====================================================================
+# Parliament website rules for the regulatory scraper.
+# Each category is one Entry URL from the intake tracker. date_source says which date decides
+# the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on each
+# item page. Lines marked PLACEHOLDER need your input or confirmation.
+#
+# Parliament has no core website: the categories use three websites, and each category's
+# website is the host of its listing_url (see SITES in scrapers/parliament_scraper.py):
+#   www.parliament.gov.sg  listing_type cards            categories 1 and 2
+#   sprs.parl.gov.sg       listing_type sitting_reports  category 3
+#   www.egazette.gov.sg    listing_type cards (PDFs)     category 4
+# base_url and landing_url below are only the regulator's home page.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: PARLIAMENT
+
+# false skips this regulator without removing it
+is_active: true
+
+# Regulator home. Each category runs on the website of its own listing_url.
+base_url: https://www.parliament.gov.sg
+
+# Starting page, opened once at the start of a run
+landing_url: https://www.parliament.gov.sg/
+
+# Safety limit on listing pages read per category (only Entry URLs with page= are paged)
+max_pages_per_category: 20
+
+# Pause between page loads and Hansard service calls, to be polite to the websites
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load or a Hansard service call
+navigation_timeout_ms: 60000
+
+# Time allowed for a listing to appear (includes passing the bot challenge)
+listing_render_timeout_ms: 45000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page, service call or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the category after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot of an item page (first match wins).
+# Hansard snapshots are built from the Hansard service and do not use these.
+html_content_selectors:
+- main
+- body
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- header
+- footer
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Bills split: category 1 keeps bill titles with one of these words, category 2 the rest.
+# The Hansard category logs which sections of a sitting contain them (no filtering).
+# A word ending in * matches every word starting with it: financ* = Finance, Financial, Financing.
+title_keyword_sets:
+  FS_CROSS_CUTTING:
+  - financ*
+
+# Coverage checklist: one entry per Entry URL in the intake tracker.
+# No Parliament website has a date range in the URL, so filter_by_date_in_url is false
+# everywhere, and expected_card_types must be [] (cards have no type label).
+categories:
+# Categories 1 and 2 read the same listing; bills are split by title_keyword_sets above.
+# PLACEHOLDER: read as one page. If the listing is paged, add page=1 to the Entry URL.
+- category_id: 1_FS_CROSS_CUTTING_BILLS
+  category_name: Parliament/Financial Sector & Cross-Cutting Bills (Tiers 1 & 2)
+  listing_type: cards
+  listing_url: https://www.parliament.gov.sg/parliamentary-business/bills-introduced
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+- category_id: 2_NON_FS_BILLS
+  category_name: Parliament/Non-FS Bills (Tier 2 Awareness Items)
+  listing_type: cards
+  listing_url: https://www.parliament.gov.sg/parliamentary-business/bills-introduced
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# Every sitting in the scan period is one item, saved as one HTML snapshot of the whole
+# Official Report (read from the Hansard service, not from the search page). The listing_url
+# only names the website. PLACEHOLDER: no FS filter yet; the run log lists the sections of
+# each sitting that contain FS keywords.
+- category_id: 3_MINISTERIAL_STATEMENTS_HANSARD_FS
+  category_name: Parliament/Ministerial Statements & Hansard Debates on FS
+  listing_type: sitting_reports
+  listing_url: https://sprs.parl.gov.sg/search/#/home
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: false
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# eGazette results link straight to their PDFs: each result is downloaded as the item's only
+# document. PLACEHOLDER: the tracker also names sso.agc.gov.sg for this row; it is not read
+# here (add it to SITES and a category if needed).
+- category_id: 4_COMMENCEMENT_GAZETTED_ACTS
+  category_name: Parliament/Commencement Notifications & Gazetted Acts
+  listing_type: cards
+  listing_url: https://www.egazette.gov.sg/egazette-browse/?q=Gazetted%20acts%20commence&category%5B0%5D=Government%20Gazette&subCategory%5B0%5D=Bankruptcy%20Act%20Notice&subCategory%5B1%5D=Notices%20under%20the%20Constitution&subCategory%5B2%5D=Notices%20under%20other%20Acts
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: false
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []

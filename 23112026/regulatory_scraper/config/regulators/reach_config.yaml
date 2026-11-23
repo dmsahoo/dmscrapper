@@ -1,0 +1,121 @@
+# =====================================================================
+# REACH (www.reach.gov.sg) website rules for the regulatory scraper.
+# Each category is one listing page (a Public consultation search). date_source says which date
+# decides the scan period. pdf_include_keywords and pdf_exclude_keywords filter the PDF links on
+# each item page. Lines marked PLACEHOLDER need your input or confirmation.
+# =====================================================================
+
+# Regulator code stored with every document
+regulator_id: REACH
+
+# false skips this regulator without removing it
+is_active: true
+
+# Only links on this host are followed or downloaded
+base_url: https://www.reach.gov.sg
+
+# Starting page, used in the smoke check
+landing_url: https://www.reach.gov.sg/latest-happenings/public-consultation/
+
+# Safety limit on listing pages read per category
+max_pages_per_category: 20
+
+# Pause between page loads, to be polite to the website
+request_delay_seconds: 1.0
+
+# Time allowed for a page to load
+navigation_timeout_ms: 60000
+
+# Time allowed for the listing cards to appear (and for the Entry URL filters to apply)
+listing_render_timeout_ms: 30000
+
+# Time allowed for one file download
+download_timeout_ms: 120000
+
+# Attempts for a page or download before it counts as failed
+max_retries: 3
+
+# Wait before the next attempt (grows with each attempt)
+retry_backoff_seconds: 5
+
+# Larger files are skipped and logged
+max_file_size_mb: 100
+
+# Stop the run after this many failures in a row
+max_consecutive_failures: 10
+
+# Page parts kept for an HTML snapshot (first match wins)
+# PLACEHOLDER: add the REACH article body container above main once confirmed in DevTools
+html_content_selectors:
+- main
+
+# Page parts removed from an HTML snapshot
+html_exclude_selectors:
+- script
+- style
+- noscript
+- nav
+- form
+
+# An HTML snapshot with less text than this is not saved
+html_min_text_chars: 200
+
+# Coverage checklist: one entry per listing page the scraper reads
+# All three use the Public consultation search. Its filters (Status, Category, year) sit in the
+# filters parameter of listing_url and are applied by the page itself, so filter_by_date_in_url
+# is false and the scan period is applied from the card date. The scraper waits until every
+# card matches the listing_url filters before reading the page. Do not add a year filter: it
+# would stop finding new items when the year changes.
+# The page number in listing_url is replaced by the scraper (page=1, 2, ...).
+# expected_card_types: [] turns the label check off. The label on a REACH card is the agency
+#   (for example Ministry of Finance); the Category filter already limits agencies.
+# PLACEHOLDER download_pdfs / capture_html: consultation papers are linked through go.gov.sg
+#   short links (not on www.reach.gov.sg), so they are not downloaded; capture_html keeps the
+#   consultation page text.
+# PLACEHOLDER pdf_include_keywords / pdf_exclude_keywords: add words to keep only some PDFs.
+categories:
+# Single-agency financial consultations only: Category filter = ACRA, MOF. Joint (multi-agency)
+#   consultations are in category 2.
+- category_id: 1_FINANCIAL_SECTOR_CONSULTATIONS
+  category_name: Financial Sector Consultations
+  listing_type: cards
+  listing_url: https://www.reach.gov.sg/latest-happenings/public-consultation/?page=1&search=consultation&filters=%5B%7B%22id%22%3A%22Category%22%2C%22items%22%3A%5B%7B%22id%22%3A%22Accounting+and+Corporate+Regulatory+Authority%22%7D%2C%7B%22id%22%3A%22Ministry+of+Finance%22%7D%5D%7D%5D
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# PLACEHOLDER rule (best effort until the regulatory screening team confirms; tracker: Unclear):
+#   cross-cutting = a joint consultation (one REACH label naming 2+ agencies) that includes at
+#   least one financial agency. Category filter = the joint options from the REACH filter:
+#   MOF + ACRA, MOF + Singapore Customs. Add new joint options here when REACH shows them.
+- category_id: 2_CROSS_CUTTING_CONSULTATIONS_FS_IMPACT
+  category_name: Cross-Cutting Consultations with FS Impact
+  listing_type: cards
+  listing_url: https://www.reach.gov.sg/latest-happenings/public-consultation/?page=1&search=consultation&filters=%5B%7B%22id%22%3A%22Category%22%2C%22items%22%3A%5B%7B%22id%22%3A%22Ministry+of+Finance+and+Accounting+and+Corporate+Regulatory+Authority%22%7D%2C%7B%22id%22%3A%22Ministry+of+Finance+and+Singapore+Customs%22%7D%5D%7D%5D
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
+
+# All agencies, Status = Open only (closed consultations are not wanted here). Items already
+#   found by categories 1 and 2 in the same run are skipped (DUPLICATE_IN_RUN). Open
+#   consultations are recent, so this category mostly finds items when the scan period
+#   reaches the current weeks.
+- category_id: 3_UPCOMING_AND_ONGOING_CONSULTATIONS
+  category_name: Upcoming and Ongoing Consultations
+  listing_type: cards
+  listing_url: https://www.reach.gov.sg/latest-happenings/public-consultation/?page=1&search=consultation&filters=%5B%7B%22id%22%3A%22Status%22%2C%22items%22%3A%5B%7B%22id%22%3A%22Open%22%7D%5D%7D%5D
+  expected_card_types: []
+  date_source: listing_date
+  filter_by_date_in_url: false
+  download_pdfs: true
+  capture_html: true
+  pdf_include_keywords: []
+  pdf_exclude_keywords: []
