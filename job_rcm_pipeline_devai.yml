@@ -1,0 +1,63 @@
+# job_rcm_pipeline_devai: 1 job, 4 tasks (copy, parse and chunk, embed, Regulator Agent)
+# Paste into the job page: menu, Edit as YAML. Replace <repo_path> (4 places) and <failure_email> first.
+name: job_rcm_pipeline_devai
+description: Daily RCM pipeline. Bronze copy, Silver text, Gold chunks, AI embeddings, then the Regulator Agent.
+max_concurrent_runs: 1                 # never two runs at the same time
+timeout_seconds: 14400                 # the whole run stops after 4 hours
+schedule:
+  quartz_cron_expression: '0 30 10 * * ?'   # 10:30 every day, after the scan verdict job in the external workspace
+  timezone_id: Asia/Singapore
+  pause_status: PAUSED                 # unpause after the first manual runs work
+email_notifications:
+  on_failure:
+    - <failure_email>
+parameters:                            # given to every task
+  - name: env
+    default: dev
+  - name: regulator_id
+    default: ALL                       # ALL, or one regulator such as MAS
+tasks:
+  - task_key: copy_documents
+    description: Copies files with the verdict No threats found from the landing storage to the Bronze volume
+    notebook_task:
+      notebook_path: <repo_path>/notebooks/01_copy_job
+      source: WORKSPACE
+      base_parameters:
+        max_files: '500'               # 1 to 1000
+    timeout_seconds: 3600
+    max_retries: 0
+
+  - task_key: parse_and_chunk
+    description: Extracts the text to Silver (document_content) and the chunks to Gold (document_chunks)
+    depends_on:
+      - task_key: copy_documents
+    notebook_task:
+      notebook_path: <repo_path>/notebooks/02_parse_and_chunk
+      source: WORKSPACE
+      base_parameters:
+        max_documents: '200'           # 1 to 1000
+    timeout_seconds: 3600
+    max_retries: 0
+
+  - task_key: embed_chunks
+    description: Adds an embedding for every new chunk in sng_rcm_ai.chunk_embeddings
+    depends_on:
+      - task_key: parse_and_chunk
+    notebook_task:
+      notebook_path: <repo_path>/notebooks/04_embed_chunks
+      source: WORKSPACE
+    timeout_seconds: 3600
+    max_retries: 0
+
+  - task_key: regulator_agent
+    description: Fills the 12 CPDAP CPL fields for each new document version (sng_rcm_gold.document_analysis)
+    depends_on:
+      - task_key: embed_chunks
+    notebook_task:
+      notebook_path: <repo_path>/notebooks/03_regulator_agent
+      source: WORKSPACE
+      base_parameters:
+        max_documents: '100'           # 1 to 100 (this notebook allows at most 100)
+        document_id: ''                # empty: every document with no analysis yet
+    timeout_seconds: 7200
+    max_retries: 0                     # no automatic retry, so the model is not called twice
